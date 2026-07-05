@@ -227,18 +227,18 @@ function ContactFloat({ t }) { return <aside className="contact-float" aria-labe
 function TechArticles({ setFilter, t }) {
   const articles = t.techArticles;
   const articleImages = [
-    '/product-images/017-photo-1496181133206-80ce9b88a853-32b1f75b24ba.jpg',
-    '/product-images/029-photo-1597872200969-2b65d56bd16b-c1156a99f9f4.jpg',
-    '/product-images/019-photo-1516321318423-f06f85e504b3-35654f97d864.jpg',
-    '/product-images/028-photo-1593642632823-8f785ba67e45-6dc880aa0936.jpg',
-    '/product-images/027-photo-1588872657578-7efd1f1555ed-31988d89da28.jpg',
-    '/product-images/020-photo-1517336714731-489689fd1ca8-b23482fd7555.jpg',
-    '/product-images/023-photo-1541807084-5c52b6b3adef-3bb79c3b2c8c.jpg',
-    '/product-images/021-photo-1527443224154-c4a3942d3acf-aebf60d7d3c1.jpg',
-    '/product-images/025-photo-1555066931-4365d14bab8c-edac264c4fba.jpg',
-    '/product-images/030-photo-1609091839311-d5365f9ff1c5-c0c85440345d.jpg',
-    '/product-images/016-photo-1484788984921-03950022c9ef-86eba85350c8.jpg',
-    '/product-images/018-photo-1515879218367-8466d910aaa4-c45f51f17907.jpg',
+    '/product-images/017-photo-1496181133206-80ce9b88a853-32b1f75b24ba.webp',
+    '/product-images/029-photo-1597872200969-2b65d56bd16b-c1156a99f9f4.webp',
+    '/product-images/019-photo-1516321318423-f06f85e504b3-35654f97d864.webp',
+    '/product-images/028-photo-1593642632823-8f785ba67e45-6dc880aa0936.webp',
+    '/product-images/027-photo-1588872657578-7efd1f1555ed-31988d89da28.webp',
+    '/product-images/020-photo-1517336714731-489689fd1ca8-b23482fd7555.webp',
+    '/product-images/023-photo-1541807084-5c52b6b3adef-3bb79c3b2c8c.webp',
+    '/product-images/021-photo-1527443224154-c4a3942d3acf-aebf60d7d3c1.webp',
+    '/product-images/025-photo-1555066931-4365d14bab8c-edac264c4fba.webp',
+    '/product-images/030-photo-1609091839311-d5365f9ff1c5-c0c85440345d.webp',
+    '/product-images/016-photo-1484788984921-03950022c9ef-86eba85350c8.webp',
+    '/product-images/018-photo-1515879218367-8466d910aaa4-c45f51f17907.webp',
   ];
   const articleList = articles.map((article, index) => ({ ...article, image: articleImages[index % articleImages.length] }));
   const [activeTag, setActiveTag] = useState(t.allPosts);
