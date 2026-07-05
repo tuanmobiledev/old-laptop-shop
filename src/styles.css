@@ -856,7 +856,8 @@
 .admin-login-card input,
 .admin-toolbar input,
 .admin-fields input,
-.admin-fields select {
+.admin-fields select,
+.admin-url-row input {
   border: 1px solid #d4e0ea;
   border-radius: 14px;
   background: #fff;
@@ -881,7 +882,7 @@
 }
 
 .admin-fields {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
   display: grid;
@@ -893,6 +894,56 @@
   font-size: .9rem;
   font-weight: 800;
   display: grid;
+}
+
+.admin-media-panel {
+  grid-column: 1 / -1;
+  border: 1px solid #d4e0ea;
+  border-radius: 22px;
+  background: #fbfdff;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.admin-media-head {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  display: flex;
+}
+
+.admin-media-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-media-head span {
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.admin-media-head small,
+.admin-help {
+  color: #64748b;
+  font-weight: 750;
+}
+
+.admin-url-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  display: grid;
+}
+
+.admin-url-row svg {
+  color: var(--blue);
+}
+
+.admin-save-bar {
+  align-items: center;
+  gap: 10px;
+  display: flex;
 }
 
 .admin-image-field {
@@ -928,6 +979,11 @@
   background: #f7fbff;
 }
 
+.admin-upload-button.compact {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
 .admin-upload-button input {
   display: none;
 }
@@ -955,7 +1011,7 @@
 
 .admin-table article {
   border-radius: 22px;
-  grid-template-columns: 92px 1fr auto auto auto;
+  grid-template-columns: 92px 1fr auto auto;
   align-items: center;
   gap: 14px;
   padding: 12px;
@@ -980,6 +1036,11 @@
   margin: 0 0 5px;
 }
 
+.admin-table small {
+  color: #0b5eb8;
+  font-weight: 850;
+}
+
 .admin-table .danger {
   color: #fff;
   background: #c2410c;
@@ -995,8 +1056,15 @@
 
   .admin-login-card form,
   .admin-fields,
-  .admin-table article {
+  .admin-table article,
+  .admin-url-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-media-head,
+  .admin-save-bar {
+    align-items: stretch;
+    display: grid;
   }
 
   

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, ImagePlus, LogOut, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Check, Edit3, ImagePlus, Link as LinkIcon, LogOut, Plus, Save, ShieldCheck, Trash2, X } from 'lucide-react';
 import { formatCurrency } from './data.js';
 
 const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
@@ -20,6 +20,8 @@ const readMediaFile = (file) => new Promise((resolve, reject) => {
 });
 
 const createProductId = () => Date.now();
+const uniqueList = (items) => [...new Set((items || []).filter(Boolean))];
+const getProductImages = (product) => uniqueList([...(Array.isArray(product.images) ? product.images : []), product.image].map(normalizeImagePath));
 
 const productDraft = () => ({
   id: '', name: '', category: 'laptop-cu', brand: 'Dell',
@@ -34,22 +36,26 @@ const productDraft = () => ({
   rating: 4.7, reviews: 0, type: 'catalog',
 });
 
-const normalizeAdminProduct = (draft) => ({
-  ...productDraft(),
-  ...draft,
-  image: normalizeImagePath(draft.image || draft.images?.[0]) || '/oscar-cover.jpg',
-  images: (draft.images?.length ? draft.images : [draft.image]).map(normalizeImagePath).filter(Boolean),
-  video: draft.video || '',
-  id: Number(draft.id) || createProductId(),
-  price: Number(draft.price) || 0,
-  oldPrice: Number(draft.oldPrice) || Number(draft.price) || 0,
-  stock: Number(draft.stock) || 0,
-  batteryWh: draft.batteryWh ? Number(draft.batteryWh) : undefined,
-  specs: {
-    vi: [draft.cpu, draft.gpu, `${draft.ram} RAM`, `${draft.ssd} SSD`, draft.screen].filter(Boolean),
-    en: [draft.cpu, draft.gpu, `${draft.ram} RAM`, `${draft.ssd} SSD`, draft.screen].filter(Boolean),
-  },
-});
+const normalizeAdminProduct = (draft) => {
+  const images = getProductImages(draft);
+  const mainImage = normalizeImagePath(draft.image || images[0]) || '/oscar-cover.jpg';
+  return {
+    ...productDraft(),
+    ...draft,
+    image: mainImage,
+    images: uniqueList([mainImage, ...images]),
+    video: draft.video || '',
+    id: Number(draft.id) || createProductId(),
+    price: Number(draft.price) || 0,
+    oldPrice: Number(draft.oldPrice) || Number(draft.price) || 0,
+    stock: 1,
+    batteryWh: draft.batteryWh ? Number(draft.batteryWh) : undefined,
+    specs: {
+      vi: [draft.cpu, draft.gpu, `${draft.ram} RAM`, `${draft.ssd} SSD`, draft.screen].filter(Boolean),
+      en: [draft.cpu, draft.gpu, `${draft.ram} RAM`, `${draft.ssd} SSD`, draft.screen].filter(Boolean),
+    },
+  };
+};
 
 export default function AdminProductsPage({ products, setProducts, t }) {
   const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEYS.admin) || '');
@@ -58,11 +64,12 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(productDraft());
   const [query, setQuery] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
   const isAdmin = token === ADMIN_TOKEN;
   const visibleProducts = products.filter((p) =>
     `${p.name} ${p.brand} ${p.cpu} ${p.gpu}`.toLowerCase().includes(query.toLowerCase())
   );
-  const draftImages = (draft.images?.length ? draft.images : [draft.image].filter(Boolean));
+  const draftImages = getProductImages(draft);
   const draftMedia = [
     ...draftImages.map((src, index) => ({ type: 'image', src, index })),
     ...(draft.video ? [{ type: 'video', src: draft.video, index: 0 }] : []),
@@ -84,19 +91,24 @@ export default function AdminProductsPage({ products, setProducts, t }) {
     setToken('');
     setEditing(null);
   };
-  const startCreate = () => { setEditing('new'); setDraft(productDraft()); };
-  const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, batteryWh: p.batteryWh || '' }); };
+  const startCreate = () => { setEditing('new'); setDraft(productDraft()); setMediaUrl(''); };
+  const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, images: getProductImages(p), batteryWh: p.batteryWh || '' }); setMediaUrl(''); };
   const addImage = (image) => setDraft((cur) => {
-    const currentImages = cur.images?.length ? cur.images : [cur.image].filter(Boolean);
-    const images = currentImages.filter((src) => src && src !== '/oscar-cover.jpg');
-    const nextImages = [...images, image];
-    return { ...cur, image, images: nextImages };
+    const images = uniqueList([...getProductImages(cur).filter((src) => src !== '/oscar-cover.jpg'), normalizeImagePath(image)]);
+    return { ...cur, image: images[0] || image, images };
   });
   const removeImage = (index) => setDraft((cur) => {
-    const images = (cur.images?.length ? cur.images : [cur.image].filter(Boolean)).filter((_, i) => i !== index);
+    const images = getProductImages(cur).filter((_, i) => i !== index);
     return { ...cur, images, image: images[0] || '/oscar-cover.jpg' };
   });
-  const setMainImage = (image) => setDraft((cur) => ({ ...cur, image }));
+  const setMainImage = (image) => setDraft((cur) => ({ ...cur, image, images: uniqueList([image, ...getProductImages(cur).filter((src) => src !== image)]) }));
+  const addMediaUrl = () => {
+    const url = mediaUrl.trim();
+    if (!url) return;
+    if (/\.(mp4|webm|mov)([?#].*)?$/i.test(url)) setDraft((cur) => ({ ...cur, video: url }));
+    else addImage(url);
+    setMediaUrl('');
+  };
   const handleMediaUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -190,37 +202,33 @@ export default function AdminProductsPage({ products, setProducts, t }) {
             {field(t.screenLabel, 'screen')}
             {field(t.adminSalePrice, 'price', 'number')}
             {field(t.adminOldPrice, 'oldPrice', 'number')}
-            {field(t.adminStock, 'stock', 'number')}
-            <label className="admin-image-field">
-              <span>Media sản phẩm</span>
-              <input
-                value={draft.image || ''}
-                onChange={(e) => {
-                  const image = e.target.value;
-                  setDraft((cur) => ({ ...cur, image, images: image ? [image, ...(cur.images || []).filter((src) => src && src !== image && src !== '/oscar-cover.jpg')] : cur.images }));
-                }}
-                placeholder="Dán URL/path ảnh chính hoặc chọn upload bên dưới"
-              />
-              <div className="admin-image-tools">
-                <label className="admin-upload-button video-upload">
+            <div className="admin-media-panel">
+              <div className="admin-media-head">
+                <div><span>Media sản phẩm</span><small>{draftImages.length} ảnh{draft.video ? ' + 1 video' : ''}</small></div>
+                <label className="admin-upload-button compact">
                   <ImagePlus size={17} />
-                  <span>Chọn ảnh hoặc video</span>
+                  <span>Upload ảnh/video</span>
                   <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} />
                 </label>
+              </div>
+              <div className="admin-url-row">
+                <LinkIcon size={17} />
+                <input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMediaUrl(); } }} placeholder="Dán link ảnh hoặc video rồi bấm Thêm" />
+                <button type="button" onClick={addMediaUrl}>Thêm</button>
               </div>
               <div className="admin-media-grid">
                 {draftMedia.map((media) => (
                   <div className={`admin-media-tile ${media.type === 'image' && draft.image === media.src ? 'active' : ''}`} key={`${media.type}-${media.src}-${media.index}`}>
                     {media.type === 'video' ? <video src={media.src} controls /> : <img src={normalizeImagePath(media.src) || '/oscar-cover.jpg'} alt="" onError={imageFallback} />}
                     <div>
-                      {media.type === 'image' && <button type="button" onClick={() => setMainImage(media.src)}>Ảnh chính</button>}
+                      {media.type === 'image' && <button type="button" onClick={() => setMainImage(media.src)}>{draft.image === media.src ? <><Check size={14} /> Chính</> : 'Đặt chính'}</button>}
                       <button className="danger" type="button" onClick={() => media.type === 'video' ? setDraft((cur) => ({ ...cur, video: '' })) : removeImage(media.index)}>Xóa</button>
                     </div>
                   </div>
                 ))}
               </div>
-              <small>Ảnh và video nằm chung một khu vực. Có thể thêm/xóa media; video sẽ phát trong trang chi tiết.</small>
-            </label>
+              <small className="admin-help">Ảnh chính nằm đầu danh sách và sẽ hiển thị ở catalog. Khi lưu, toàn bộ danh sách ảnh được giữ lại để deploy không rớt còn 1 ảnh.</small>
+            </div>
             <label>
               <span>{t.category}</span>
               <select value={draft.category} onChange={(e) => setDraft((cur) => ({ ...cur, category: e.target.value }))}>
@@ -239,7 +247,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
               </select>
             </label>
           </div>
-          <button className="primary" type="submit">{t.saveProduct}</button>
+          <div className="admin-save-bar"><button className="primary" type="submit"><Save size={17} /> {t.saveProduct}</button><button type="button" onClick={() => setEditing(null)}>Hủy</button></div>
         </form>
       )}
       <div className="admin-toolbar">
@@ -254,8 +262,8 @@ export default function AdminProductsPage({ products, setProducts, t }) {
               <h3>{p.name}</h3>
               <p>{p.brand} • {p.cpu} • {p.ram}/{p.ssd}</p>
               <strong>{formatCurrency(p.price)}</strong>
+              <small>{getProductImages(p).length} ảnh{p.video ? ' + video' : ''}</small>
             </div>
-            <span>{t.stock}: {p.stock ?? 0}</span>
             <button onClick={() => startEdit(p)}><Edit3 size={17} /> {t.edit}</button>
             <button className="danger" onClick={() => removeProduct(p.id)}><Trash2 size={17} /> {t.delete}</button>
           </article>

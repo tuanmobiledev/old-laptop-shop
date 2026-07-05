@@ -14,8 +14,13 @@ import ErrorBoundary from './ErrorBoundary.jsx';
 const STORAGE_KEYS = { admin: 'oscar-admin-token', products: 'oscar-products-v2' };
 
 const normalizeImagePath = (path) => typeof path === 'string' && !path.startsWith('data:') ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
+const uniqueList = (items) => [...new Set((items || []).filter(Boolean))];
 const normalizeProductImages = (items) => Array.isArray(items)
-  ? items.map((product) => ({ ...product, image: normalizeImagePath(product.image) }))
+  ? items.map((product) => {
+    const images = uniqueList([...(Array.isArray(product.images) ? product.images : []), product.image].map(normalizeImagePath));
+    const image = normalizeImagePath(product.image || images[0]) || '/oscar-cover.jpg';
+    return { ...product, image, images: uniqueList([image, ...images]), video: product.video || '' };
+  })
   : products;
 const productImageFallback = (event) => {
   const img = event.currentTarget;
@@ -311,10 +316,10 @@ function ProductDetailPage({ lang, onClose, product, productList, setProduct, t 
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!product) return undefined;
-    setActiveMedia({ type: 'image', src: normalizeImagePath(product.image) });
+    setActiveMedia({ type: 'image', src: normalizeImagePath(product.image || product.images?.[0]) || '/oscar-cover.jpg' });
     setSelectedVariantIndex(0);
     return undefined;
-  }, [product?.id, product?.image]);
+  }, [product?.id, product?.image, product?.images]);
   useEffect(() => {
     if (!product) return;
     const ld = document.createElement('script');
@@ -325,7 +330,7 @@ function ProductDetailPage({ lang, onClose, product, productList, setProduct, t 
       '@type': 'Product',
       name: product.name,
       description: `${product.brand} ${product.cpu} / ${product.ram} / ${product.ssd} — ${text(product.condition, lang)}`,
-      image: normalizeImagePath(product.image),
+      image: (product.images?.length ? product.images : [product.image]).map(normalizeImagePath),
       brand: { '@type': 'Brand', name: product.brand },
       offers: {
         '@type': 'Offer',
@@ -363,7 +368,6 @@ function ProductDetailPage({ lang, onClose, product, productList, setProduct, t 
   const similar = productList.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 4);
   const productImages = (displayProduct.images?.length ? displayProduct.images : [displayProduct.image]).map(normalizeImagePath).filter(Boolean);
   const mediaItems = [...productImages.map((src) => ({ type: 'image', src, label: product.name })), ...(displayProduct.video ? [{ type: 'video', src: displayProduct.video, label: `${product.name} video` }] : [])];
-  const galleryItems = [product, ...productList.filter((item) => item.id !== product.id && (item.brand === product.brand || item.category === product.category))].slice(0, 6);
   const detailRam = displayProduct.ram && displayProduct.ram !== 'N/A' && displayProduct.ram !== 'Liên hệ' ? displayProduct.ram : '8GB';
   const detailSsd = displayProduct.ssd && displayProduct.ssd !== 'N/A' && displayProduct.ssd !== 'Liên hệ' ? displayProduct.ssd.replace(/(\d)(GB|TB)$/i, '$1 $2') : '256 GB';
   const detailCpu = displayProduct.cpu && displayProduct.cpu !== 'N/A' && displayProduct.cpu !== 'Liên hệ' ? displayProduct.cpu : t.updatedSoon;
