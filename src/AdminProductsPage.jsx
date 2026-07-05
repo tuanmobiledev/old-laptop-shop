@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Edit3, ImagePlus, LogOut, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Edit3, ImagePlus, LogOut, Plus, ShieldCheck, Trash2, Video, X } from 'lucide-react';
 import { formatCurrency } from './data.js';
 
 const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
 const STORAGE_KEYS = { admin: 'oscar-admin-token', products: 'oscar-products-v2' };
-const normalizeImagePath = (path) => typeof path === 'string' ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
+const normalizeImagePath = (path) => typeof path === 'string' && !path.startsWith('data:') ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
 const imageFallback = (event) => {
   const img = event.currentTarget;
   if (img.dataset.fallbackApplied === 'true') return;
@@ -12,7 +12,7 @@ const imageFallback = (event) => {
   img.src = '/oscar-cover.jpg';
 };
 
-const readImageFile = (file) => new Promise((resolve, reject) => {
+const readMediaFile = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
   reader.onerror = () => reject(reader.error || new Error('Cannot read image'));
@@ -37,7 +37,9 @@ const productDraft = () => ({
 const normalizeAdminProduct = (draft) => ({
   ...productDraft(),
   ...draft,
-  image: normalizeImagePath(draft.image) || '/oscar-cover.jpg',
+  image: normalizeImagePath(draft.image || draft.images?.[0]) || '/oscar-cover.jpg',
+  images: (draft.images?.length ? draft.images : [draft.image]).map(normalizeImagePath).filter(Boolean),
+  video: draft.video || '',
   id: Number(draft.id) || createProductId(),
   price: Number(draft.price) || 0,
   oldPrice: Number(draft.oldPrice) || Number(draft.price) || 0,
@@ -79,6 +81,15 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   };
   const startCreate = () => { setEditing('new'); setDraft(productDraft()); };
   const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, batteryWh: p.batteryWh || '' }); };
+  const addImage = (image) => setDraft((cur) => {
+    const images = [...(cur.images?.length ? cur.images : [cur.image].filter(Boolean)), image];
+    return { ...cur, image: cur.image || image, images };
+  });
+  const removeImage = (index) => setDraft((cur) => {
+    const images = (cur.images?.length ? cur.images : [cur.image].filter(Boolean)).filter((_, i) => i !== index);
+    return { ...cur, images, image: images[0] || '/oscar-cover.jpg' };
+  });
+  const setMainImage = (image) => setDraft((cur) => ({ ...cur, image }));
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -93,10 +104,32 @@ export default function AdminProductsPage({ products, setProducts, t }) {
       return;
     }
     try {
-      const image = await readImageFile(file);
-      setDraft((cur) => ({ ...cur, image }));
+      const image = await readMediaFile(file);
+      addImage(image);
     } catch {
       window.alert(t.adminImageReadError || 'Không đọc được file hình ảnh.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+  const handleVideoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      window.alert('Vui lòng chọn file video.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      window.alert('Video tối đa 12MB.');
+      event.target.value = '';
+      return;
+    }
+    try {
+      const video = await readMediaFile(file);
+      setDraft((cur) => ({ ...cur, video }));
+    } catch {
+      window.alert('Không đọc được file video.');
     } finally {
       event.target.value = '';
     }
@@ -177,14 +210,38 @@ export default function AdminProductsPage({ products, setProducts, t }) {
                 placeholder="/product-images/example.webp hoặc upload hình"
               />
               <div className="admin-image-tools">
-                <img src={normalizeImagePath(draft.image) || '/oscar-cover.jpg'} alt="" onError={imageFallback} />
                 <label className="admin-upload-button">
                   <ImagePlus size={17} />
                   <span>{t.adminUploadImage || 'Chọn hình upload'}</span>
                   <input type="file" accept="image/*" onChange={handleImageUpload} />
                 </label>
               </div>
-              <small>{t.adminUploadHelp || 'Hình sẽ được lưu cùng dữ liệu sản phẩm trên trình duyệt này. Nên dùng ảnh dưới 2MB.'}</small>
+              <div className="admin-media-grid">
+                {(draft.images?.length ? draft.images : [draft.image].filter(Boolean)).map((image, index) => (
+                  <div className={`admin-media-tile ${draft.image === image ? 'active' : ''}`} key={`${image}-${index}`}>
+                    <img src={normalizeImagePath(image)} alt="" onError={imageFallback} />
+                    <div>
+                      <button type="button" onClick={() => setMainImage(image)}>Ảnh chính</button>
+                      <button className="danger" type="button" onClick={() => removeImage(index)}>Xóa</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <small>{t.adminUploadHelp || 'Có thể thêm/sửa/xóa nhiều ảnh. Ảnh đầu hoặc ảnh được chọn sẽ là ảnh chính.'}</small>
+            </label>
+            <label className="admin-image-field">
+              <span>Video sản phẩm</span>
+              <input value={draft.video || ''} onChange={(e) => setDraft((cur) => ({ ...cur, video: e.target.value }))} placeholder="Dán URL video hoặc upload video" />
+              <div className="admin-image-tools">
+                <label className="admin-upload-button video-upload">
+                  <Video size={17} />
+                  <span>Chọn video upload</span>
+                  <input type="file" accept="video/*" onChange={handleVideoUpload} />
+                </label>
+                {draft.video && <button className="danger admin-clear-media" type="button" onClick={() => setDraft((cur) => ({ ...cur, video: '' }))}>Xóa video</button>}
+              </div>
+              {draft.video && <video className="admin-video-preview" src={draft.video} controls />}
+              <small>Video sẽ phát ở trang chi tiết sản phẩm. Nên dùng video dưới 12MB.</small>
             </label>
             <label>
               <span>{t.category}</span>
@@ -214,7 +271,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
       <div className="admin-table">
         {visibleProducts.map((p) => (
           <article key={p.id}>
-            <img src={normalizeImagePath(p.image)} alt="" loading="lazy" onError={imageFallback} />
+            <img src={normalizeImagePath(p.image || p.images?.[0]) || '/oscar-cover.jpg'} alt="" loading="lazy" onError={imageFallback} />
             <div>
               <h3>{p.name}</h3>
               <p>{p.brand} • {p.cpu} • {p.ram}/{p.ssd}</p>
