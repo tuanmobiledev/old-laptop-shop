@@ -818,6 +818,49 @@
   display: grid;
 }
 
+.admin-image-field {
+  grid-column: span 2;
+}
+
+.admin-image-tools {
+  grid-template-columns: 96px 1fr;
+  align-items: stretch;
+  gap: 10px;
+  display: grid;
+}
+
+.admin-image-tools img {
+  width: 96px;
+  height: 76px;
+  object-fit: cover;
+  background: #edf3f8;
+  border: 1px solid #d4e0ea;
+  border-radius: 14px;
+}
+
+.admin-upload-button {
+  color: var(--blue) !important;
+  cursor: pointer;
+  border: 1px dashed #8fb4d8;
+  border-radius: 14px;
+  place-items: center;
+  align-content: center;
+  min-height: 76px;
+  padding: 10px;
+  text-align: center;
+  background: #f7fbff;
+}
+
+.admin-upload-button input {
+  display: none;
+}
+
+.admin-image-field small {
+  color: #64748b;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .admin-toolbar {
   justify-content: space-between;
   margin: 24px 0 14px;

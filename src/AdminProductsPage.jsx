@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, LogOut, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Edit3, ImagePlus, LogOut, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { formatCurrency } from './data.js';
 
 const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
@@ -11,6 +11,13 @@ const imageFallback = (event) => {
   img.dataset.fallbackApplied = 'true';
   img.src = '/oscar-cover.jpg';
 };
+
+const readImageFile = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(reader.error || new Error('Cannot read image'));
+  reader.readAsDataURL(file);
+});
 
 const createProductId = () => Date.now();
 
@@ -72,6 +79,28 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   };
   const startCreate = () => { setEditing('new'); setDraft(productDraft()); };
   const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, batteryWh: p.batteryWh || '' }); };
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      window.alert(t.adminImageTypeError || 'Vui lòng chọn file hình ảnh.');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      window.alert(t.adminImageSizeError || 'Hình ảnh tối đa 2MB.');
+      event.target.value = '';
+      return;
+    }
+    try {
+      const image = await readImageFile(file);
+      setDraft((cur) => ({ ...cur, image }));
+    } catch {
+      window.alert(t.adminImageReadError || 'Không đọc được file hình ảnh.');
+    } finally {
+      event.target.value = '';
+    }
+  };
   const saveProduct = (e) => {
     e.preventDefault();
     const saved = normalizeAdminProduct(draft);
@@ -140,7 +169,23 @@ export default function AdminProductsPage({ products, setProducts, t }) {
             {field(t.adminSalePrice, 'price', 'number')}
             {field(t.adminOldPrice, 'oldPrice', 'number')}
             {field(t.adminStock, 'stock', 'number')}
-            {field(t.adminImageUrl, 'image')}
+            <label className="admin-image-field">
+              <span>{t.adminImageUrl}</span>
+              <input
+                value={draft.image || ''}
+                onChange={(e) => setDraft((cur) => ({ ...cur, image: e.target.value }))}
+                placeholder="/product-images/example.webp hoặc upload hình"
+              />
+              <div className="admin-image-tools">
+                <img src={normalizeImagePath(draft.image) || '/oscar-cover.jpg'} alt="" onError={imageFallback} />
+                <label className="admin-upload-button">
+                  <ImagePlus size={17} />
+                  <span>{t.adminUploadImage || 'Chọn hình upload'}</span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} />
+                </label>
+              </div>
+              <small>{t.adminUploadHelp || 'Hình sẽ được lưu cùng dữ liệu sản phẩm trên trình duyệt này. Nên dùng ảnh dưới 2MB.'}</small>
+            </label>
             <label>
               <span>{t.category}</span>
               <select value={draft.category} onChange={(e) => setDraft((cur) => ({ ...cur, category: e.target.value }))}>
