@@ -4,6 +4,13 @@ import { formatCurrency } from './data.js';
 
 const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
 const STORAGE_KEYS = { admin: 'oscar-admin-token', products: 'oscar-products-v2' };
+const normalizeImagePath = (path) => typeof path === 'string' ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
+const imageFallback = (event) => {
+  const img = event.currentTarget;
+  if (img.dataset.fallbackApplied === 'true') return;
+  img.dataset.fallbackApplied = 'true';
+  img.src = '/oscar-cover.jpg';
+};
 
 const createProductId = () => Date.now();
 
@@ -11,7 +18,7 @@ const productDraft = () => ({
   id: '', name: '', category: 'laptop-cu', brand: 'Dell',
   cpu: '', gpu: '', ram: '', ssd: '', screen: '',
   demand: 'office', stock: 1, price: 0, oldPrice: 0,
-  image: '/product-images/098-thinkpad-t14s-gen-2-1-8896f4af23ce.webp',
+  image: '/oscar-cover.jpg',
   color: '#255f85', batteryWh: '', batteryRuntime: '',
   condition: { vi: 'Máy cũ', en: 'Used' },
   badge: { vi: 'Liên hệ xác nhận hàng', en: 'Contact to confirm' },
@@ -23,6 +30,7 @@ const productDraft = () => ({
 const normalizeAdminProduct = (draft) => ({
   ...productDraft(),
   ...draft,
+  image: normalizeImagePath(draft.image) || '/oscar-cover.jpg',
   id: Number(draft.id) || createProductId(),
   price: Number(draft.price) || 0,
   oldPrice: Number(draft.oldPrice) || Number(draft.price) || 0,
@@ -36,6 +44,7 @@ const normalizeAdminProduct = (draft) => ({
 
 export default function AdminProductsPage({ products, setProducts, t }) {
   const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEYS.admin) || '');
+  const [loginError, setLoginError] = useState('');
   const [tokenInput, setTokenInput] = useState('');
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(productDraft());
@@ -46,11 +55,15 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   );
   const login = (e) => {
     e.preventDefault();
-    if (tokenInput.trim() === ADMIN_TOKEN) {
-      localStorage.setItem(STORAGE_KEYS.admin, tokenInput.trim());
-      setToken(tokenInput.trim());
+    const cleanToken = tokenInput.trim();
+    if (cleanToken === ADMIN_TOKEN) {
+      localStorage.setItem(STORAGE_KEYS.admin, cleanToken);
+      setToken(cleanToken);
       setTokenInput('');
+      setLoginError('');
+      return;
     }
+    setLoginError(t.adminLoginError || 'Token admin không đúng.');
   };
   const logout = () => {
     localStorage.removeItem(STORAGE_KEYS.admin);
@@ -92,6 +105,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
           <input type="password" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} placeholder={t.adminTokenPlaceholder} autoComplete="current-password" />
           <button className="primary" type="submit">{t.login}</button>
         </form>
+        {loginError && <small className="subscribe-error">{loginError}</small>}
       </div>
     </section>
   );
@@ -155,7 +169,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
       <div className="admin-table">
         {visibleProducts.map((p) => (
           <article key={p.id}>
-            <img src={p.image} alt="" loading="lazy" />
+            <img src={normalizeImagePath(p.image)} alt="" loading="lazy" onError={imageFallback} />
             <div>
               <h3>{p.name}</h3>
               <p>{p.brand} • {p.cpu} • {p.ram}/{p.ssd}</p>
