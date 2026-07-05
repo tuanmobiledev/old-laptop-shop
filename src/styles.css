@@ -736,8 +736,7 @@
 
 .admin-actions,
 .admin-form-head,
-
-.admin-media-grid {
+.admin-toolbar {
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 10px;
   display: grid;
@@ -814,10 +813,10 @@
   display: grid;
 }
 
-.admin-toolbar {
-  align-items: center;
-  gap: 12px;
-  display: flex;
+.admin-media-grid {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+  display: grid;
 }
 
 .admin-actions {
