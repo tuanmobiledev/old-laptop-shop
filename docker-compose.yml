@@ -53,6 +53,20 @@ services:
     labels:
       - "dokploy.app=laprevive-web"
       - "dokploy.server=coder-tuan"
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.laprevive-gzip.compress=true"
+      - "traefik.http.routers.laprevive-web.entrypoints=http"
+      - "traefik.http.routers.laprevive-web.rule=Host(`maytinhthuduc.com`)"
+      - "traefik.http.routers.laprevive-web.middlewares=laprevive-gzip"
+      - "traefik.http.routers.laprevive-web.service=laprevive-web"
+      - "traefik.http.services.laprevive-web.loadbalancer.server.port=80"
+      - "traefik.http.routers.laprevive-web-secure.entrypoints=https"
+      - "traefik.http.routers.laprevive-web-secure.rule=Host(`maytinhthuduc.com`)"
+      - "traefik.http.routers.laprevive-web-secure.middlewares=laprevive-gzip"
+      - "traefik.http.routers.laprevive-web-secure.tls=true"
+      - "traefik.http.routers.laprevive-web-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.laprevive-web-secure.service=laprevive-web"
+      - "traefik.http.services.laprevive-web.loadbalancer.server.port=80"
 
 volumes:
   laprevive_pgdata:
