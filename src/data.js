@@ -124,19 +124,19 @@ export const policies = [
 ];
 
 export const contacts = {
-  hotline: '0814 793 566',
-  warranty: '0814 793 566',
+  hotline: '0523.755.755',
+  warranty: '0523.755.755',
   email: 'tuan.mobile.dev@gmail.com',
   website: 'https://maytinhthuduc.com/',
   facebook: 'https://www.facebook.com/laptoposcar.thuduc',
-  zalo: 'https://zalo.me/0814793566',
+  zalo: 'https://zalo.me/0523755755',
   hours: { vi: '8:30 - 21:00, Thứ 2 - Chủ nhật', en: '8:30 AM - 9:00 PM, Mon - Sun' },
   address: '33a Đường số 17, Thủ Đức, Hồ Chí Minh, Việt Nam',
   mapUrl: 'https://maps.app.goo.gl/5gH8hxhXA7zZeFPp8',
 };
 
 export const branches = [
-  { name: 'Laptop OSCAR Thủ Đức', address: '33a Đường số 17, Thủ Đức, Hồ Chí Minh, Việt Nam', phone: '0814 793 566', mapUrl: 'https://maps.app.goo.gl/5gH8hxhXA7zZeFPp8' },
+  { name: 'Laptop OSCAR Thủ Đức', address: '33a Đường số 17, Thủ Đức, Hồ Chí Minh, Việt Nam', phone: '0523.755.755', mapUrl: 'https://maps.app.goo.gl/5gH8hxhXA7zZeFPp8' },
 ];
 
 
