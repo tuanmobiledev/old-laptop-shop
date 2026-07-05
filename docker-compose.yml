@@ -1,0 +1,58 @@
+services:
+  laprevive-db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    image: laprevive-db:latest
+    container_name: laprevive-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-laprevive}
+      POSTGRES_USER: ${POSTGRES_USER:-laprevive}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_strong_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - laprevive_pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-15432}:5432"
+
+  laprevive-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+      args:
+        VITE_GA4_MEASUREMENT_ID: ${VITE_GA4_MEASUREMENT_ID:-}
+        VITE_ADMIN_TOKEN: ${VITE_ADMIN_TOKEN:-}
+    image: laprevive-api:latest
+    container_name: laprevive-api
+    restart: unless-stopped
+    depends_on:
+      - laprevive-db
+    environment:
+      POSTGRES_HOST: laprevive-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-laprevive}
+      POSTGRES_USER: ${POSTGRES_USER:-laprevive}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_strong_password}
+
+  laprevive-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_GA4_MEASUREMENT_ID: ${VITE_GA4_MEASUREMENT_ID:-}
+        VITE_ADMIN_TOKEN: ${VITE_ADMIN_TOKEN:-}
+    image: laprevive-web:latest
+    container_name: laprevive-web
+    restart: unless-stopped
+    depends_on:
+      - laprevive-api
+    ports:
+      - "${APP_PORT:-18080}:80"
+    labels:
+      - "dokploy.app=laprevive-web"
+      - "dokploy.server=coder-tuan"
+
+volumes:
+  laprevive_pgdata:
