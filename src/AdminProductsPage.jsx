@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, ImagePlus, LogOut, Plus, ShieldCheck, Trash2, Video, X } from 'lucide-react';
+import { Edit3, ImagePlus, LogOut, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { formatCurrency } from './data.js';
 
 const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
@@ -25,7 +25,7 @@ const productDraft = () => ({
   id: '', name: '', category: 'laptop-cu', brand: 'Dell',
   cpu: '', gpu: '', ram: '', ssd: '', screen: '',
   demand: 'office', stock: 1, price: 0, oldPrice: 0,
-  image: '/oscar-cover.jpg',
+  image: '/oscar-cover.jpg', images: ['/oscar-cover.jpg'], video: '',
   color: '#255f85', batteryWh: '', batteryRuntime: '',
   condition: { vi: 'Máy cũ', en: 'Used' },
   badge: { vi: 'Liên hệ xác nhận hàng', en: 'Contact to confirm' },
@@ -62,6 +62,11 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   const visibleProducts = products.filter((p) =>
     `${p.name} ${p.brand} ${p.cpu} ${p.gpu}`.toLowerCase().includes(query.toLowerCase())
   );
+  const draftImages = (draft.images?.length ? draft.images : [draft.image].filter(Boolean));
+  const draftMedia = [
+    ...draftImages.map((src, index) => ({ type: 'image', src, index })),
+    ...(draft.video ? [{ type: 'video', src: draft.video, index: 0 }] : []),
+  ];
   const login = (e) => {
     e.preventDefault();
     const cleanToken = tokenInput.trim();
@@ -82,54 +87,38 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   const startCreate = () => { setEditing('new'); setDraft(productDraft()); };
   const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, batteryWh: p.batteryWh || '' }); };
   const addImage = (image) => setDraft((cur) => {
-    const images = [...(cur.images?.length ? cur.images : [cur.image].filter(Boolean)), image];
-    return { ...cur, image: cur.image || image, images };
+    const currentImages = cur.images?.length ? cur.images : [cur.image].filter(Boolean);
+    const images = currentImages.filter((src) => src && src !== '/oscar-cover.jpg');
+    const nextImages = [...images, image];
+    return { ...cur, image, images: nextImages };
   });
   const removeImage = (index) => setDraft((cur) => {
     const images = (cur.images?.length ? cur.images : [cur.image].filter(Boolean)).filter((_, i) => i !== index);
     return { ...cur, images, image: images[0] || '/oscar-cover.jpg' };
   });
   const setMainImage = (image) => setDraft((cur) => ({ ...cur, image }));
-  const handleImageUpload = async (event) => {
+  const handleMediaUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      window.alert(t.adminImageTypeError || 'Vui lòng chọn file hình ảnh.');
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    if (!isImage && !isVideo) {
+      window.alert('Vui lòng chọn file hình ảnh hoặc video.');
       event.target.value = '';
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      window.alert(t.adminImageSizeError || 'Hình ảnh tối đa 2MB.');
+    const limit = isVideo ? 12 * 1024 * 1024 : 2 * 1024 * 1024;
+    if (file.size > limit) {
+      window.alert(isVideo ? 'Video tối đa 12MB.' : 'Hình ảnh tối đa 2MB.');
       event.target.value = '';
       return;
     }
     try {
-      const image = await readMediaFile(file);
-      addImage(image);
+      const media = await readMediaFile(file);
+      if (isVideo) setDraft((cur) => ({ ...cur, video: media }));
+      else addImage(media);
     } catch {
-      window.alert(t.adminImageReadError || 'Không đọc được file hình ảnh.');
-    } finally {
-      event.target.value = '';
-    }
-  };
-  const handleVideoUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('video/')) {
-      window.alert('Vui lòng chọn file video.');
-      event.target.value = '';
-      return;
-    }
-    if (file.size > 12 * 1024 * 1024) {
-      window.alert('Video tối đa 12MB.');
-      event.target.value = '';
-      return;
-    }
-    try {
-      const video = await readMediaFile(file);
-      setDraft((cur) => ({ ...cur, video }));
-    } catch {
-      window.alert('Không đọc được file video.');
+      window.alert('Không đọc được file media.');
     } finally {
       event.target.value = '';
     }
@@ -203,45 +192,34 @@ export default function AdminProductsPage({ products, setProducts, t }) {
             {field(t.adminOldPrice, 'oldPrice', 'number')}
             {field(t.adminStock, 'stock', 'number')}
             <label className="admin-image-field">
-              <span>{t.adminImageUrl}</span>
+              <span>Media sản phẩm</span>
               <input
                 value={draft.image || ''}
-                onChange={(e) => setDraft((cur) => ({ ...cur, image: e.target.value }))}
-                placeholder="/product-images/example.webp hoặc upload hình"
+                onChange={(e) => {
+                  const image = e.target.value;
+                  setDraft((cur) => ({ ...cur, image, images: image ? [image, ...(cur.images || []).filter((src) => src && src !== image && src !== '/oscar-cover.jpg')] : cur.images }));
+                }}
+                placeholder="Dán URL/path ảnh chính hoặc chọn upload bên dưới"
               />
               <div className="admin-image-tools">
-                <label className="admin-upload-button">
+                <label className="admin-upload-button video-upload">
                   <ImagePlus size={17} />
-                  <span>{t.adminUploadImage || 'Chọn hình upload'}</span>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} />
+                  <span>Chọn ảnh hoặc video</span>
+                  <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} />
                 </label>
               </div>
               <div className="admin-media-grid">
-                {(draft.images?.length ? draft.images : [draft.image].filter(Boolean)).map((image, index) => (
-                  <div className={`admin-media-tile ${draft.image === image ? 'active' : ''}`} key={`${image}-${index}`}>
-                    <img src={normalizeImagePath(image)} alt="" onError={imageFallback} />
+                {draftMedia.map((media) => (
+                  <div className={`admin-media-tile ${media.type === 'image' && draft.image === media.src ? 'active' : ''}`} key={`${media.type}-${media.src}-${media.index}`}>
+                    {media.type === 'video' ? <video src={media.src} controls /> : <img src={normalizeImagePath(media.src) || '/oscar-cover.jpg'} alt="" onError={imageFallback} />}
                     <div>
-                      <button type="button" onClick={() => setMainImage(image)}>Ảnh chính</button>
-                      <button className="danger" type="button" onClick={() => removeImage(index)}>Xóa</button>
+                      {media.type === 'image' && <button type="button" onClick={() => setMainImage(media.src)}>Ảnh chính</button>}
+                      <button className="danger" type="button" onClick={() => media.type === 'video' ? setDraft((cur) => ({ ...cur, video: '' })) : removeImage(media.index)}>Xóa</button>
                     </div>
                   </div>
                 ))}
               </div>
-              <small>{t.adminUploadHelp || 'Có thể thêm/sửa/xóa nhiều ảnh. Ảnh đầu hoặc ảnh được chọn sẽ là ảnh chính.'}</small>
-            </label>
-            <label className="admin-image-field">
-              <span>Video sản phẩm</span>
-              <input value={draft.video || ''} onChange={(e) => setDraft((cur) => ({ ...cur, video: e.target.value }))} placeholder="Dán URL video hoặc upload video" />
-              <div className="admin-image-tools">
-                <label className="admin-upload-button video-upload">
-                  <Video size={17} />
-                  <span>Chọn video upload</span>
-                  <input type="file" accept="video/*" onChange={handleVideoUpload} />
-                </label>
-                {draft.video && <button className="danger admin-clear-media" type="button" onClick={() => setDraft((cur) => ({ ...cur, video: '' }))}>Xóa video</button>}
-              </div>
-              {draft.video && <video className="admin-video-preview" src={draft.video} controls />}
-              <small>Video sẽ phát ở trang chi tiết sản phẩm. Nên dùng video dưới 12MB.</small>
+              <small>Ảnh và video nằm chung một khu vực. Có thể thêm/xóa media; video sẽ phát trong trang chi tiết.</small>
             </label>
             <label>
               <span>{t.category}</span>

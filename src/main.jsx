@@ -306,7 +306,7 @@ function Footer({ t }) {
   return <footer className="footer business-footer"><div className="shell footer-grid"><div><strong>Laptop OSCAR Thủ Đức</strong><p>{t.footerDesc}</p><form className="footer-subscribe" onSubmit={subscribe}><input type="email" value={email} onChange={(event) => { setEmail(event.target.value); setSubscribed(false); }} placeholder={t.newsletterPlaceholder} aria-label={t.newsletterPlaceholder} required /><button type="submit">{t.subscribe}</button></form>{subscribed && <small className="subscribe-success">{t.subscribed}</small>}{newsletterError && <small className="subscribe-error">{newsletterError}</small>}<div className="pay-badges"><span>{t.payCOD}</span><span>{t.payBanking}</span><span>{t.payVisa}</span><span>{t.payInstallment}</span></div><a href="#top">{t.backTop}</a></div>{t.footerColumns.map((col) => <div key={col.title}><h3>{col.title}</h3>{col.links.map((link) => <a href={footerHref(link)} key={link.label} target={footerHref(link).startsWith('http') ? '_blank' : undefined} rel={footerHref(link).startsWith('http') ? 'noreferrer' : undefined}>{link.label}</a>)}</div>)}</div><div className="shell footer-bottom"><span>© 2026 Laptop OSCAR Thủ Đức</span><span>{contacts.hotline}</span><a href={`mailto:${contacts.email}`}>{contacts.email}</a><span>{contacts.address}</span></div></footer>;
 }
 function ProductDetailPage({ lang, onClose, product, productList, setProduct, t }) {
-  const [activeImage, setActiveImage] = useState('');
+  const [activeMedia, setActiveMedia] = useState({ type: 'image', src: normalizeImagePath(product?.image) || '/oscar-cover.jpg' });
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -314,7 +314,7 @@ function ProductDetailPage({ lang, onClose, product, productList, setProduct, t 
     setActiveMedia({ type: 'image', src: normalizeImagePath(product.image) });
     setSelectedVariantIndex(0);
     return undefined;
-  }, [onClose, product?.id, product?.image]);
+  }, [product?.id, product?.image]);
   useEffect(() => {
     if (!product) return;
     const ld = document.createElement('script');
