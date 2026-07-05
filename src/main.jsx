@@ -13,6 +13,11 @@ import ErrorBoundary from './ErrorBoundary.jsx';
 
 const STORAGE_KEYS = { admin: 'oscar-admin-token', products: 'oscar-products-v2' };
 
+const normalizeImagePath = (path) => typeof path === 'string' ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
+const normalizeProductImages = (items) => Array.isArray(items)
+  ? items.map((product) => ({ ...product, image: normalizeImagePath(product.image) }))
+  : products;
+
 const slugify = (value) => String(value || '')
   .toLowerCase()
   .normalize('NFD')
@@ -34,7 +39,7 @@ function App() {
   const [filterOpen, setFilterOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth > 760 : true);
   const isMobile = () => typeof window !== 'undefined' && window.innerWidth <= 760;
   const [managedProducts, setManagedProducts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.products)) || products; } catch { return products; }
+    try { return normalizeProductImages(JSON.parse(localStorage.getItem(STORAGE_KEYS.products)) || products); } catch { return products; }
   });
   const [selectedProduct, setSelectedProduct] = useState(() => {
     const productId = productIdFromPath();
@@ -49,7 +54,7 @@ function App() {
 
   const [page, setPage] = useState(routeFromHash);
   const t = copy[lang];
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(managedProducts)); }, [managedProducts]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(normalizeProductImages(managedProducts))); }, [managedProducts]);
   useEffect(() => {
     initGA();
   }, []);
