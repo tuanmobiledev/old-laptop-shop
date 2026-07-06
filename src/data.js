@@ -126,7 +126,7 @@ export const policies = [
 export const contacts = {
   hotline: '0523.755.755',
   warranty: '0523.755.755',
-  email: 'tuan.mobile.dev@gmail.com',
+  email: 'maytinhoscar@gmail.com',
   website: 'https://maytinhthuduc.com/',
   facebook: 'https://www.facebook.com/laptoposcar.thuduc',
   zalo: 'https://zalo.me/0523755755',
