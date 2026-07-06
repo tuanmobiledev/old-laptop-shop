@@ -35,6 +35,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-laprevive}
       POSTGRES_USER: ${POSTGRES_USER:-laprevive}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_strong_password}
+      ADMIN_TOKEN: ${VITE_ADMIN_TOKEN:-change-me-in-production}
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - laprevive_uploads:/data/uploads
 
   laprevive-web:
     build:
@@ -48,6 +52,8 @@ services:
     restart: unless-stopped
     depends_on:
       - laprevive-api
+    volumes:
+      - laprevive_uploads:/usr/share/nginx/html/uploads:ro
     ports:
       - "${APP_PORT:-18080}:80"
     labels:
@@ -70,3 +76,4 @@ services:
 
 volumes:
   laprevive_pgdata:
+  laprevive_uploads:

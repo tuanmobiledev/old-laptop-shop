@@ -4,19 +4,57 @@ import { formatCurrency } from './data.js';
 
 const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
 const STORAGE_KEYS = { admin: 'oscar-admin-token', products: 'oscar-products-v2' };
-const normalizeImagePath = (path) => typeof path === 'string' && !path.startsWith('data:') ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
+const normalizeImagePath = (path) => typeof path === 'string' && path.startsWith('/product-images/') ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
 const imageFallback = (event) => {
   const img = event.currentTarget;
   if (img.dataset.fallbackApplied === 'true') return;
   img.dataset.fallbackApplied = 'true';
-  img.src = '/oscar-cover.jpg';
+  img.src = '/oscar-cover.webp';
 };
 
-const readMediaFile = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(reader.error || new Error('Cannot read image'));
-  reader.readAsDataURL(file);
+const uploadMediaFile = async (file, token) => {
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      'X-File-Name': encodeURIComponent(file.name || 'media'),
+      'X-Admin-Token': token,
+    },
+    body: file,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.url) throw new Error(payload.error || 'upload_failed');
+  return payload.url;
+};
+
+const imageToWebpFile = (file, quality = 0.82) => new Promise((resolve, reject) => {
+  if (file.type === 'image/webp') {
+    resolve(file);
+    return;
+  }
+
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  image.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    canvas.getContext('2d').drawImage(image, 0, 0);
+    canvas.toBlob((blob) => {
+      URL.revokeObjectURL(objectUrl);
+      if (!blob) {
+        reject(new Error('webp_conversion_failed'));
+        return;
+      }
+      const webpName = (file.name || 'image').replace(/\.[a-z0-9]+$/i, '') + '.webp';
+      resolve(new File([blob], webpName, { type: 'image/webp', lastModified: Date.now() }));
+    }, 'image/webp', quality);
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error('image_load_failed'));
+  };
+  image.src = objectUrl;
 });
 
 const createProductId = () => Date.now();
@@ -27,7 +65,7 @@ const productDraft = () => ({
   id: '', name: '', category: 'laptop-cu', brand: 'Dell',
   cpu: '', gpu: '', ram: '', ssd: '', screen: '',
   demand: 'office', stock: 1, price: 0, oldPrice: 0,
-  image: '/oscar-cover.jpg', images: ['/oscar-cover.jpg'], video: '',
+  image: '/oscar-cover.webp', images: ['/oscar-cover.webp'], video: '',
   color: '#255f85', batteryWh: '', batteryRuntime: '',
   condition: { vi: 'Máy cũ', en: 'Used' },
   badge: { vi: 'Liên hệ xác nhận hàng', en: 'Contact to confirm' },
@@ -38,7 +76,7 @@ const productDraft = () => ({
 
 const normalizeAdminProduct = (draft) => {
   const images = getProductImages(draft);
-  const mainImage = normalizeImagePath(draft.image || images[0]) || '/oscar-cover.jpg';
+  const mainImage = normalizeImagePath(draft.image || images[0]) || '/oscar-cover.webp';
   return {
     ...productDraft(),
     ...draft,
@@ -94,12 +132,12 @@ export default function AdminProductsPage({ products, setProducts, t }) {
   const startCreate = () => { setEditing('new'); setDraft(productDraft()); setMediaUrl(''); };
   const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, images: getProductImages(p), batteryWh: p.batteryWh || '' }); setMediaUrl(''); };
   const addImage = (image) => setDraft((cur) => {
-    const images = uniqueList([...getProductImages(cur).filter((src) => src !== '/oscar-cover.jpg'), normalizeImagePath(image)]);
+    const images = uniqueList([...getProductImages(cur).filter((src) => src !== '/oscar-cover.webp'), normalizeImagePath(image)]);
     return { ...cur, image: images[0] || image, images };
   });
   const removeImage = (index) => setDraft((cur) => {
     const images = getProductImages(cur).filter((_, i) => i !== index);
-    return { ...cur, images, image: images[0] || '/oscar-cover.jpg' };
+    return { ...cur, images, image: images[0] || '/oscar-cover.webp' };
   });
   const setMainImage = (image) => setDraft((cur) => ({ ...cur, image, images: uniqueList([image, ...getProductImages(cur).filter((src) => src !== image)]) }));
   const addMediaUrl = () => {
@@ -126,11 +164,12 @@ export default function AdminProductsPage({ products, setProducts, t }) {
       return;
     }
     try {
-      const media = await readMediaFile(file);
-      if (isVideo) setDraft((cur) => ({ ...cur, video: media }));
-      else addImage(media);
+      const mediaFile = isImage ? await imageToWebpFile(file) : file;
+      const mediaUrl = await uploadMediaFile(mediaFile, token);
+      if (isVideo) setDraft((cur) => ({ ...cur, video: mediaUrl }));
+      else addImage(mediaUrl);
     } catch {
-      window.alert('Không đọc được file media.');
+      window.alert('Upload media thất bại. Vui lòng thử lại.');
     } finally {
       event.target.value = '';
     }
@@ -219,7 +258,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
               <div className="admin-media-grid">
                 {draftMedia.map((media) => (
                   <div className={`admin-media-tile ${media.type === 'image' && draft.image === media.src ? 'active' : ''}`} key={`${media.type}-${media.src}-${media.index}`}>
-                    {media.type === 'video' ? <video src={media.src} controls /> : <img src={normalizeImagePath(media.src) || '/oscar-cover.jpg'} alt="" onError={imageFallback} />}
+                    {media.type === 'video' ? <video src={media.src} controls /> : <img src={normalizeImagePath(media.src) || '/oscar-cover.webp'} alt="" onError={imageFallback} />}
                     <div>
                       {media.type === 'image' && <button type="button" onClick={() => setMainImage(media.src)}>{draft.image === media.src ? <><Check size={14} /> Chính</> : 'Đặt chính'}</button>}
                       <button className="danger" type="button" onClick={() => media.type === 'video' ? setDraft((cur) => ({ ...cur, video: '' })) : removeImage(media.index)}>Xóa</button>
@@ -227,7 +266,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
                   </div>
                 ))}
               </div>
-              <small className="admin-help">Ảnh chính nằm đầu danh sách và sẽ hiển thị ở catalog. Khi lưu, toàn bộ danh sách ảnh được giữ lại để deploy không rớt còn 1 ảnh.</small>
+              <small className="admin-help">File upload được lưu trên server trong Docker volume và trả về link /uploads/... Ảnh chính nằm đầu danh sách.</small>
             </div>
             <label>
               <span>{t.category}</span>
@@ -257,7 +296,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
       <div className="admin-table">
         {visibleProducts.map((p) => (
           <article key={p.id}>
-            <img src={normalizeImagePath(p.image || p.images?.[0]) || '/oscar-cover.jpg'} alt="" loading="lazy" onError={imageFallback} />
+            <img src={normalizeImagePath(p.image || p.images?.[0]) || '/oscar-cover.webp'} alt="" loading="lazy" onError={imageFallback} />
             <div>
               <h3>{p.name}</h3>
               <p>{p.brand} • {p.cpu} • {p.ram}/{p.ssd}</p>
