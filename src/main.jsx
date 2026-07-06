@@ -17,7 +17,13 @@ const normalizeImagePath = (path) => typeof path === 'string' && path.startsWith
 const uniqueList = (items) => [...new Set((items || []).filter(Boolean))];
 const normalizeProductImages = (items) => Array.isArray(items)
   ? items.map((product) => {
-    const images = uniqueList([...(Array.isArray(product.images) ? product.images : []), product.image].map(normalizeImagePath));
+    const catalogProduct = products.find((item) => item.id === product.id) || products.find((item) => item.name === product.name) || {};
+    const images = uniqueList([
+      ...(Array.isArray(product.images) ? product.images : []),
+      product.image,
+      ...(Array.isArray(catalogProduct.images) ? catalogProduct.images : []),
+      catalogProduct.image,
+    ].map(normalizeImagePath));
     const image = normalizeImagePath(product.image || images[0]) || '/oscar-cover.webp';
     return { ...product, image, images: uniqueList([image, ...images]), video: product.video || '' };
   })
