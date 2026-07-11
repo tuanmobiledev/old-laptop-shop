@@ -1,0 +1,33 @@
+.upgrade-builder{margin:18px 0;border:1px solid #d8dee8;border-radius:18px;background:linear-gradient(145deg,#fff 0%,#f4f7fa 100%);overflow:hidden}
+.upgrade-builder[open]{padding:0 22px 22px}
+.upgrade-summary{display:block;padding:18px 22px;cursor:pointer;list-style:none}
+.upgrade-summary::-webkit-details-marker{display:none}
+.upgrade-summary-hint{display:inline-flex;margin-top:8px;color:#52606d;font-size:.92rem}
+.upgrade-builder[open] .upgrade-summary{margin:0 -22px 0;border-bottom:1px solid #d8dee8;background:#fff}
+.upgrade-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.upgrade-heading h3{margin:5px 0 0}
+.upgrade-heading>strong{color:#d9480f;font-size:1.25rem;white-space:nowrap}
+.upgrade-status{display:grid;gap:6px;margin:16px 0;padding:14px;border-left:4px solid #168aad;background:#eaf7fa}
+.upgrade-status small{color:#52606d}
+.upgrade-warning{padding:12px;border-radius:10px;background:#fff3cd;color:#704d00}
+.addon-group{margin-top:17px}
+.addon-group>b{display:block;margin-bottom:8px}
+.addon-group>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.addon-group button{display:flex;justify-content:space-between;gap:12px;text-align:left;padding:11px 12px;border:1px solid #ccd5df;border-radius:11px;background:#fff;color:#263238;cursor:pointer}
+.addon-group button.selected{border-color:#e8590c;background:#fff4e8;box-shadow:inset 0 0 0 1px #e8590c}
+.addon-group button strong{white-space:nowrap;color:#d9480f}
+.configuration-contact{margin-top:22px;padding:16px;border-radius:14px;background:#172a3a;color:#fff}
+.configuration-contact p{margin:0 0 12px}
+.configuration-contact>div{display:flex;flex-wrap:wrap;gap:8px}
+.configuration-contact button,.configuration-contact a{display:inline-flex;align-items:center;gap:7px}
+.configuration-contact small{display:block;margin-top:10px;color:#cad5df}
+.quick-order{display:grid;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #d8dee8}
+.quick-order h4{margin:0}
+.quick-order>div{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.quick-order input,.quick-order textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #bdc7d2;border-radius:10px;font:inherit}
+.quick-order textarea{min-height:72px;resize:vertical}
+.quick-order .primary{border:0;cursor:pointer}
+.quick-order .primary:disabled{opacity:.65}
+.order-success{color:#087f5b;font-weight:700}
+.order-error{color:#c92a2a;font-weight:700}
+@media(max-width:720px){.upgrade-builder[open]{padding:0 14px 16px}.upgrade-summary{padding:15px 14px}.upgrade-builder[open] .upgrade-summary{margin:0 -14px}.upgrade-heading{display:grid;gap:8px}.addon-group>div,.quick-order>div{grid-template-columns:1fr}.configuration-contact>div{display:grid}.configuration-contact button,.configuration-contact a{justify-content:center}}
