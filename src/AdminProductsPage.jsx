@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Check, Edit3, ImagePlus, Link as LinkIcon, LogOut, Plus, Save, ShieldCheck, Trash2, X } from 'lucide-react';
 import { formatCurrency } from './data.js';
 
-const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || 'change-me-in-production';
-const STORAGE_KEYS = { admin: 'oscar-admin-token', products: 'oscar-products-v2' };
+const restBase = () => window.OSCAR_WP?.restUrl || '/wp-json/oscar/v1/';
 const normalizeImagePath = (path) => typeof path === 'string' && path.startsWith('/product-images/') ? path.replace(/\.jpg(?=($|[?#]))/i, '.webp') : path;
 const imageFallback = (event) => {
   const img = event.currentTarget;
@@ -12,15 +11,14 @@ const imageFallback = (event) => {
   img.src = '/oscar-cover.webp';
 };
 
-const uploadMediaFile = async (file, token) => {
-  const response = await fetch('/api/upload', {
+const uploadMediaFile = async (file) => {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch(`${restBase()}admin/media`, {
     method: 'POST',
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-      'X-File-Name': encodeURIComponent(file.name || 'media'),
-      'X-Admin-Token': token,
-    },
-    body: file,
+    credentials: 'same-origin',
+    headers: { 'X-WP-Nonce': window.OSCAR_WP?.nonce || '' },
+    body,
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.url) throw new Error(payload.error || 'upload_failed');
@@ -96,14 +94,17 @@ const normalizeAdminProduct = (draft) => {
 };
 
 export default function AdminProductsPage({ products, setProducts, t }) {
-  const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEYS.admin) || '');
-  const [loginError, setLoginError] = useState('');
-  const [tokenInput, setTokenInput] = useState('');
+  const [session, setSession] = useState('loading');
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(productDraft());
   const [query, setQuery] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
-  const isAdmin = token === ADMIN_TOKEN;
+  React.useEffect(() => {
+    fetch(`${restBase()}admin/session`, { credentials: 'same-origin', headers: { 'X-WP-Nonce': window.OSCAR_WP?.nonce || '' } })
+      .then((response) => setSession(response.ok ? 'authenticated' : 'anonymous'))
+      .catch(() => setSession('anonymous'));
+  }, []);
+  const isAdmin = session === 'authenticated';
   const visibleProducts = products.filter((p) =>
     `${p.name} ${p.brand} ${p.cpu} ${p.gpu}`.toLowerCase().includes(query.toLowerCase())
   );
@@ -112,22 +113,8 @@ export default function AdminProductsPage({ products, setProducts, t }) {
     ...draftImages.map((src, index) => ({ type: 'image', src, index })),
     ...(draft.video ? [{ type: 'video', src: draft.video, index: 0 }] : []),
   ];
-  const login = (e) => {
-    e.preventDefault();
-    const cleanToken = tokenInput.trim();
-    if (cleanToken === ADMIN_TOKEN) {
-      localStorage.setItem(STORAGE_KEYS.admin, cleanToken);
-      setToken(cleanToken);
-      setTokenInput('');
-      setLoginError('');
-      return;
-    }
-    setLoginError(t.adminLoginError || 'Token admin không đúng.');
-  };
   const logout = () => {
-    localStorage.removeItem(STORAGE_KEYS.admin);
-    setToken('');
-    setEditing(null);
+    window.location.assign(`/wp-login.php?action=logout&redirect_to=${encodeURIComponent(window.location.origin)}`);
   };
   const startCreate = () => { setEditing('new'); setDraft(productDraft()); setMediaUrl(''); };
   const startEdit = (p) => { setEditing(p.id); setDraft({ ...p, images: getProductImages(p), batteryWh: p.batteryWh || '' }); setMediaUrl(''); };
@@ -165,7 +152,7 @@ export default function AdminProductsPage({ products, setProducts, t }) {
     }
     try {
       const mediaFile = isImage ? await imageToWebpFile(file) : file;
-      const mediaUrl = await uploadMediaFile(mediaFile, token);
+      const mediaUrl = await uploadMediaFile(mediaFile);
       if (isVideo) setDraft((cur) => ({ ...cur, video: mediaUrl }));
       else addImage(mediaUrl);
     } catch {
@@ -197,17 +184,14 @@ export default function AdminProductsPage({ products, setProducts, t }) {
     </label>
   );
 
+  if (session === 'loading') return <section className="section shell admin-page admin-login"><p>Đang kiểm tra phiên quản trị…</p></section>;
   if (!isAdmin) return (
     <section className="section shell admin-page admin-login" id="admin">
       <div className="admin-login-card">
         <span className="eyebrow"><ShieldCheck size={16} /> {t.adminOnly}</span>
         <h1>{t.adminLoginTitle}</h1>
-        <p>{t.adminTokenHelp}</p>
-        <form onSubmit={login}>
-          <input type="password" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} placeholder={t.adminTokenPlaceholder} autoComplete="current-password" />
-          <button className="primary" type="submit">{t.login}</button>
-        </form>
-        {loginError && <small className="subscribe-error">{loginError}</small>}
+        <p>Đăng nhập WordPress bằng tài khoản có quyền quản lý cửa hàng để tiếp tục.</p>
+        <a className="primary" href={`/wp-login.php?redirect_to=${encodeURIComponent(window.location.href)}`}>{t.login}</a>
       </div>
     </section>
   );
